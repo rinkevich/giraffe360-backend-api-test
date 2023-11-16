@@ -1,10 +1,14 @@
 from django.db import models
 
-# Create your models here.
-
 
 class Event(models.Model):
-    type = models.CharField(max_length=100)
+    EVENT_CHOICES = (
+        ("PushEvent", "Push Event"),
+        ("ReleaseEvent", "Release Event"),
+        ("WatchEvent", "Watch Event"),
+    )
+
+    type = models.CharField(max_length=100, choices=EVENT_CHOICES)
     public = models.BooleanField(default=True)
     repo_id = models.IntegerField()
     actor_id = models.IntegerField()

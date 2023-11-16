@@ -1,3 +1,5 @@
-# Create your urls here
+from django.urls import path, include
 
-urlpatterns = []
+urlpatterns = [
+    path("", include("app.urls"))
+]
