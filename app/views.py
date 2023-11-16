@@ -1,32 +1,20 @@
+from django.shortcuts import get_object_or_404
 from rest_framework import status, viewsets
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
+from rest_framework.parsers import JSONParser
 from .models import Event
 from .serializers import EventSerializer
 
-
-# class EventViewSet(viewsets.ModelViewSet):
-#     serializer_class = EventSerializer
-#     queryset = Event.objects.all()
-#
-# event_list = EventViewSet.as_view({"get": "list"})
-# event_detail = EventViewSet.as_view({"get": "retrieve"})
 
 @api_view(["GET", "POST"])
 def event_list(request):
     if request.method == "GET":
         events = Event.objects.all()
-        serializer = EventSerializer(events, many=True)
         if request.GET:
-            try:
-                events = Event.objects.filter(type__exact=request.GET.get("type"))
-                serializer = EventSerializer(events, many=True)
-                serializer = EventSerializer(data=serializer.data)
-                if not serializer.is_valid():
-                    return Response(status=status.HTTP_400_BAD_REQUEST)
-            except Event.DoesNotExist:
-                return Response(status=status.HTTP_404_NOT_FOUND)
+            events = events.filter(type__exact=request.GET.get("type"))
 
+        serializer = EventSerializer(events, many=True)
         return Response(serializer.data)
 
     elif request.method == "POST":
@@ -39,10 +27,7 @@ def event_list(request):
 
 @api_view(["GET"])
 def event_detail(request, pk):
-    try:
-        event = Event.objects.get(pk=pk)
-    except Event.DoesNotExist:
-        return Response(status=status.HTTP_404_NOT_FOUND)
+    event = get_object_or_404(Event, pk=pk)
 
     if request.method == "GET":
         serializer = EventSerializer(event)
@@ -51,7 +36,7 @@ def event_detail(request, pk):
 
 @api_view(["GET"])
 def user_list(request, user_id):
-    events = Event.objects.filter(user=user_id)
+    events = Event.objects.filter(actor_id__exact=user_id)
 
     if request.method == "GET":
         serializer = EventSerializer(events, many=True)
