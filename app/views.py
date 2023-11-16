@@ -1,52 +1,43 @@
-from django.shortcuts import get_object_or_404
-from rest_framework import status, viewsets
-from rest_framework.decorators import api_view
-from rest_framework.response import Response
-from rest_framework.parsers import JSONParser
+from rest_framework import generics
+from rest_framework.exceptions import ValidationError
+
 from .models import Event
 from .serializers import EventSerializer
 
 
-@api_view(["GET", "POST"])
-def event_list(request):
-    if request.method == "GET":
+class EventCreateView(generics.ListCreateAPIView):
+    serializer_class = EventSerializer
+
+    def get_queryset(self):
         events = Event.objects.all()
-        if request.GET:
-            events = events.filter(type__exact=request.GET.get("type"))
+        if self.request.GET:
+            event_type = self.request.GET.get("type")
+            if event_type not in [choice[0] for choice in Event.EVENT_CHOICES]:
+                raise ValidationError(
+                    detail={
+                        "type": [f"Select a valid choice. {event_type} is not one of "
+                                 f"the available choices."]
+                    }
+                )
+            events = events.filter(type__exact=event_type)
 
-        serializer = EventSerializer(events, many=True)
-        return Response(serializer.data)
-
-    elif request.method == "POST":
-        serializer = EventSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-@api_view(["GET"])
-def event_detail(request, pk):
-    event = get_object_or_404(Event, pk=pk)
-
-    if request.method == "GET":
-        serializer = EventSerializer(event)
-        return Response(serializer.data)
+        return events
 
 
-@api_view(["GET"])
-def user_list(request, user_id):
-    events = Event.objects.filter(actor_id__exact=user_id)
-
-    if request.method == "GET":
-        serializer = EventSerializer(events, many=True)
-        return Response(serializer.data)
+class EventListView(generics.RetrieveAPIView):
+    queryset = Event.objects.all()
+    serializer_class = EventSerializer
 
 
-@api_view(["GET"])
-def repo_list(request, repo_id):
-    events = Event.objects.filter(repo_id__exact=repo_id)
+class UserListView(generics.ListAPIView):
+    serializer_class = EventSerializer
 
-    if request.method == "GET":
-        serializer = EventSerializer(events, many=True)
-        return Response(serializer.data)
+    def get_queryset(self):
+        return Event.objects.filter(actor_id__exact=self.kwargs.get("user_id"))
+
+
+class RepoListView(generics.ListAPIView):
+    serializer_class = EventSerializer
+
+    def get_queryset(self):
+        return Event.objects.filter(repo_id__exact=self.kwargs.get("repo_id"))
